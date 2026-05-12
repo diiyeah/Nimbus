@@ -26,6 +26,7 @@ async def analyze(file: UploadFile = File(...)):
     # Parse CSV
     try:
         rows = parse_csv(contents)
+        parse_warnings = getattr(parse_csv, "warnings", [])
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
 
@@ -62,4 +63,5 @@ async def analyze(file: UploadFile = File(...)):
         "recommendations": recommendations,
         "total_saving":    total_saving,
         "annual_saving":   annual_saving,
+        "warnings":        parse_warnings,   # skipped rows, if any
     }
