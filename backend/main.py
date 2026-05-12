@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from routes.analyze import router as analyze_router
 from routes.history import router as history_router
+from db.mongo import ping
 
 load_dotenv()
 
@@ -34,8 +35,12 @@ app.include_router(history_router)
 
 @app.get("/health", tags=["health"])
 async def health():
-    """Liveness check."""
-    return {"status": "ok"}
+    """Liveness check — pings MongoDB."""
+    db_ok = ping()
+    return {
+        "status": "ok",
+        "db": "connected" if db_ok else "unreachable",
+    }
 
 
 @app.get("/", include_in_schema=False)

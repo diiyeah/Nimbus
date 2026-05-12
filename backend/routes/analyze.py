@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.csv_parser import parse_csv
 from services.gemini import analyse_with_gemini
-from db.mongo import get_db
+from db.mongo import analyses
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
@@ -51,8 +51,7 @@ async def analyze(file: UploadFile = File(...)):
     }
 
     try:
-        db = get_db()
-        result = db["analyses"].insert_one(record)
+        result = analyses.insert_one(record)
         record_id = str(result.inserted_id)
     except Exception:
         record_id = None  # DB failure is non-fatal

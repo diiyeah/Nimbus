@@ -1,22 +1,33 @@
 import os
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo.collection import Collection
 from pymongo.database import Database
 from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017/nimbusai")
+MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 
-_client: MongoClient | None = None
+# ── Client & database ─────────────────────────────────────────────────────────
+_client: MongoClient = MongoClient(MONGODB_URI)
+db: Database = _client["nimbusai"]
+
+# ── Collections ───────────────────────────────────────────────────────────────
+analyses: Collection = db["analyses"]
+users: Collection    = db["users"]
+
+# ── Indexes (created once on startup, ignored if already exist) ───────────────
+# analyses: sort by created_at descending for history queries
+analyses.create_index([("created_at", DESCENDING)], name="analyses_created_at")
+
+# users: unique email index for login/signup
+users.create_index([("email", ASCENDING)], unique=True, name="users_email_unique")
 
 
-def get_client() -> MongoClient:
-    global _client
-    if _client is None:
-        _client = MongoClient(MONGODB_URI)
-    return _client
-
-
-def get_db() -> Database:
-    """Return the nimbusai database."""
-    return get_client()["nimbusai"]
+def ping() -> bool:
+    """Return True if MongoDB is reachable, False otherwise."""
+    try:
+        _client.admin.command("ping")
+        return True
+    except Exception:
+        return False

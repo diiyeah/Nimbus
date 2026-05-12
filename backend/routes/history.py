@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
-from db.mongo import get_db
+from db.mongo import analyses
 from bson import ObjectId
 
 router = APIRouter(prefix="/history", tags=["history"])
@@ -17,10 +17,9 @@ def _serialize(doc: dict) -> dict:
 async def get_history(limit: int = Query(default=10, ge=1, le=100)):
     """Return the most recent analyses, newest first."""
     try:
-        db = get_db()
         docs = list(
-            db["analyses"]
-            .find({}, {"rows": 0})          # exclude raw rows to keep response light
+            analyses
+            .find({}, {"rows": 0})
             .sort("created_at", -1)
             .limit(limit)
         )
@@ -38,8 +37,7 @@ async def get_analysis(analysis_id: str):
         raise HTTPException(status_code=400, detail="Invalid analysis ID format.")
 
     try:
-        db = get_db()
-        doc = db["analyses"].find_one({"_id": oid})
+        doc = analyses.find_one({"_id": oid})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
@@ -58,8 +56,7 @@ async def delete_analysis(analysis_id: str):
         raise HTTPException(status_code=400, detail="Invalid analysis ID format.")
 
     try:
-        db = get_db()
-        result = db["analyses"].delete_one({"_id": oid})
+        result = analyses.delete_one({"_id": oid})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
