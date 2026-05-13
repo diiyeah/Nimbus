@@ -8,18 +8,28 @@ from db.mongo import ping
 
 load_dotenv()
 
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:5173"
-).split(",")
+# ── CORS origins ──────────────────────────────────────────────────────────────
+_raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
+# Always include localhost:5173 for local frontend dev
+if "http://localhost:5173" not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append("http://localhost:5173")
+
+# ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(
     title="NimbusAI API",
-    description="Cloud cost intelligence — CSV upload, Gemini AI analysis, MongoDB history.",
+    description=(
+        "Cloud cost intelligence backend. "
+        "Upload billing CSVs, get Gemini AI recommendations, "
+        "and browse analysis history."
+    ),
     version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
-# ── CORS ──────────────────────────────────────────────────────────────────────
+# ── CORS middleware ───────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -32,17 +42,26 @@ app.add_middleware(
 app.include_router(analyze_router)
 app.include_router(history_router)
 
-
-@app.get("/health", tags=["health"])
-async def health():
-    """Liveness check — pings MongoDB."""
-    db_ok = ping()
+# ── Health check ──────────────────────────────────────────────────────────────
+@app.get("/", tags=["health"])
+async def root():
+    """Root health check — confirms the API is running."""
     return {
         "status": "ok",
-        "db": "connected" if db_ok else "unreachable",
+        "message": "NimbusAI API is running.",
+        "docs": "/docs",
     }
 
 
-@app.get("/", include_in_schema=False)
-async def root():
-    return {"message": "NimbusAI API running. Visit /docs for the API reference."}
+@app.get("/health", tags=["health"])
+async def health():
+    """
+    Detailed health check.
+    Pings MongoDB and reports connection status.
+    """
+    db_status = "connected" if ping() else "unreachable"
+    return {
+        "status": "ok",
+        "db":     db_status,
+        "version": "1.0.0",
+    }
