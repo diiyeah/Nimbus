@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { LayoutDashboard, Layers, BrainCircuit, FileBarChart2 } from 'lucide-react'
+import { LayoutDashboard, Layers, BrainCircuit, FileBarChart2, History } from 'lucide-react'
 
 const navItems = [
   { id: 'overview',  label: 'Overview',    icon: LayoutDashboard },
   { id: 'services',  label: 'Services',    icon: Layers },
   { id: 'insights',  label: 'AI Insights', icon: BrainCircuit },
   { id: 'reports',   label: 'Reports',     icon: FileBarChart2 },
+  { id: 'history',   label: 'History',     icon: History },
 ]
 
 /* ── Desktop sidebar (lg+) ───────────────────────────────── */

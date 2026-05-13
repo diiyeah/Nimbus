@@ -13,8 +13,8 @@ import WasteHeatmap from './components/WasteHeatmap'
 import HistoryPage from './components/HistoryPage'
 import { StatsBarSkeleton, ChartsSkeleton, ServiceCardsSkeleton } from './components/ui/Skeleton'
 
-const PAGES = { overview: 'Overview', services: 'Services', insights: 'AI Insights', reports: 'Reports' }
-const PAGE_ORDER = ['overview', 'services', 'insights', 'reports']
+const PAGES = { overview: 'Overview', services: 'Services', insights: 'AI Insights', reports: 'Reports', history: 'History' }
+const PAGE_ORDER = ['overview', 'services', 'insights', 'reports', 'history']
 
 const pageVariants = {
   enter:  (dir) => ({ opacity: 0, x: dir > 0 ? 40 : -40, filter: 'blur(4px)' }),
@@ -127,7 +127,9 @@ export default function App() {
                         {PAGES[active]}
                       </h1>
                       <p className="text-sm" style={{ color: 'rgba(255,255,255,0.35)', fontFamily: "'Inter', sans-serif" }}>
-                        {data?.name} · {data?.rows?.length} services · AI analysis complete
+                        {active === 'history'
+                          ? 'All past analyses — click any card to reload the dashboard'
+                          : `${data?.name} · ${data?.rows?.length} services · AI analysis complete`}
                       </p>
                     </motion.div>
 
@@ -159,7 +161,10 @@ export default function App() {
                         )}
                         {active === 'services' && data?.rows && <ServiceCards rows={data.rows} />}
                         {active === 'insights' && <RecommendationCards recommendations={recommendations} />}
-                        {active === 'reports' && (
+                        {active === 'reports' && data?.rows && (
+                          <WasteHeatmap rows={data.rows} />
+                        )}
+                        {active === 'history' && (
                           <HistoryPage onSelectAnalysis={handleSelectHistory} />
                         )}
                       </>
