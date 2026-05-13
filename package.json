@@ -4,9 +4,11 @@
   "description": "NimbusAI - Dark theme React app",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --port 5173",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "backend": "cd backend && .venv\\Scripts\\python.exe -m uvicorn main:app --reload --port 8000",
+    "backend:unix": "cd backend && .venv/bin/uvicorn main:app --reload --port 8000"
   },
   "dependencies": {
     "framer-motion": "^11.0.0",
