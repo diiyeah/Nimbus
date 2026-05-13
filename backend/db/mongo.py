@@ -8,26 +8,45 @@ load_dotenv()
 
 MONGODB_URI: str = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 
-# ── Client & database ─────────────────────────────────────────────────────────
-_client: MongoClient = MongoClient(MONGODB_URI)
-db: Database = _client["nimbusai"]
+# ── Lazy client — connects only when first used ───────────────────────────────
+_client: MongoClient | None = None
 
-# ── Collections ───────────────────────────────────────────────────────────────
-analyses: Collection = db["analyses"]
-users: Collection    = db["users"]
 
-# ── Indexes (created once on startup, ignored if already exist) ───────────────
-# analyses: sort by created_at descending for history queries
-analyses.create_index([("created_at", DESCENDING)], name="analyses_created_at")
+def get_client() -> MongoClient:
+    global _client
+    if _client is None:
+        _client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+    return _client
 
-# users: unique email index for login/signup
-users.create_index([("email", ASCENDING)], unique=True, name="users_email_unique")
+
+def get_db() -> Database:
+    return get_client()["nimbusai"]
+
+
+# ── Collection accessors ──────────────────────────────────────────────────────
+@property
+def analyses() -> Collection:
+    return get_db()["analyses"]
+
+
+@property
+def users() -> Collection:
+    return get_db()["users"]
+
+
+# Expose as module-level callables for direct import
+def get_analyses() -> Collection:
+    return get_db()["analyses"]
+
+
+def get_users() -> Collection:
+    return get_db()["users"]
 
 
 def ping() -> bool:
     """Return True if MongoDB is reachable, False otherwise."""
     try:
-        _client.admin.command("ping")
+        get_client().admin.command("ping")
         return True
     except Exception:
         return False

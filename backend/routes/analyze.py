@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from services.csv_parser import parse_csv
 from services.gemini import analyse_with_gemini
-from db.mongo import analyses
+from db.mongo import get_analyses
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/analyze", tags=["analyze"])
@@ -52,7 +52,7 @@ def _run_analysis(rows: list[dict], filename: str, warnings: list[str] = []) -> 
             "warnings":        warnings,
             "created_at":      datetime.now(timezone.utc),
         }
-        result = analyses.insert_one(doc)
+        result = get_analyses().insert_one(doc)
         record_id = str(result.inserted_id)
     except Exception:
         pass
