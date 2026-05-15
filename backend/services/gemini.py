@@ -7,11 +7,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ── Configure Gemini client ───────────────────────────────────────────────────
+# Key is configured fresh on each call to avoid stale cache issues
 _API_KEY = os.getenv("GEMINI_API_KEY", "")
-if _API_KEY:
-    genai.configure(api_key=_API_KEY)
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-1.5-flash-latest"
 
 # ── Allowed enum values ───────────────────────────────────────────────────────
 VALID_SEVERITIES = {"critical", "high", "medium", "low"}
@@ -104,12 +103,12 @@ def analyse_with_gemini(rows: list[dict]) -> list[dict]:
 
     # ── Call Gemini ───────────────────────────────────────────────────────────
     try:
-        genai.configure(api_key=api_key)
+        genai.configure(api_key=api_key)  # reconfigure on every call
         model = genai.GenerativeModel(
             model_name=MODEL_NAME,
             generation_config={
-                "temperature":     0.2,   # low temp = consistent, structured output
-                "top_p":           0.8,
+                "temperature":       0.2,
+                "top_p":             0.8,
                 "max_output_tokens": 2048,
             },
         )

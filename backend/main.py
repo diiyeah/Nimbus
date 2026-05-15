@@ -12,9 +12,11 @@ load_dotenv()
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173")
 ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
 
-# Always include localhost:5173 for local frontend dev
-if "http://localhost:5173" not in ALLOWED_ORIGINS:
-    ALLOWED_ORIGINS.append("http://localhost:5173")
+# Always include common localhost ports for local dev
+for _port in ["5173", "5174", "5175", "3000"]:
+    _origin = f"http://localhost:{_port}"
+    if _origin not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(_origin)
 
 # ── App ───────────────────────────────────────────────────────────────────────
 app = FastAPI(

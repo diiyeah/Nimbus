@@ -31,8 +31,9 @@ Nimbus/
 │   │   ├── analyze.py          # POST /analyze/upload, /analyze/sample
 │   │   └── history.py          # GET/DELETE /history, /history/{id}
 │   ├── services/
-│   │   ├── gemini.py           # Gemini 1.5 Flash integration
-│   │   └── csv_parser.py       # pandas CSV parsing + validation
+│   │   ├── gemini.py           # Gemini AI integration
+│   │   ├── csv_parser.py       # pandas CSV parsing + validation
+│   │   └── mock_recommendations.py  # fallback when Gemini is unavailable
 │   ├── db/
 │   │   └── mongo.py            # MongoDB connection
 │   ├── requirements.txt
@@ -46,14 +47,14 @@ Nimbus/
 
 ---
 
-## Quick Start
+## Local Development
 
 ### Prerequisites
 
 - Node.js 18+
 - Python 3.11+
 - MongoDB Atlas account (free tier)
-- Google Gemini API key (free at aistudio.google.com)
+- Google Gemini API key (free at [aistudio.google.com](https://aistudio.google.com))
 
 ---
 
@@ -66,31 +67,25 @@ cd Nimbus
 
 ---
 
-### 2. Frontend setup
-
-Install dependencies:
+### 2. Frontend
 
 ```bash
 npm install
-```
-
-Start the React dev server on **http://localhost:5173**:
-
-```bash
 npm run dev
 ```
 
+Runs on **http://localhost:5173**
+
 ---
 
-### 3. Backend setup
-
-#### Create and activate virtual environment
+### 3. Backend
 
 **Windows:**
 ```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
+pip install -r requirements.txt
 ```
 
 **macOS / Linux:**
@@ -98,73 +93,108 @@ python -m venv .venv
 cd backend
 python -m venv .venv
 source .venv/bin/activate
-```
-
-#### Install Python dependencies
-
-```bash
 pip install -r requirements.txt
 ```
 
-#### Configure environment variables
-
+**Configure `.env`:**
 ```bash
 cp .env.example .env
 ```
 
-Open `backend/.env` and fill in your values:
-
+Edit `backend/.env`:
 ```env
-GEMINI_API_KEY=AIzaSy...your_key_from_aistudio.google.com
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/nimbusai
-ALLOWED_ORIGINS=http://localhost:5173
+GEMINI_API_KEY=AIzaSy...your_key
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/nimbusai
+ALLOWED_ORIGINS=http://localhost:5173,http://localhost:5174
 ```
 
-#### Start the backend on **http://localhost:8000**
+**Start backend:**
+```powershell
+# Windows
+.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
 
-```bash
-cd backend
+# macOS / Linux
 uvicorn main:app --reload --port 8000
 ```
 
-Or if uvicorn is not on PATH (Windows):
-
-```powershell
-.venv\Scripts\python.exe -m uvicorn main:app --reload --port 8000
-```
+Runs on **http://localhost:8000** — API docs at **http://localhost:8000/docs**
 
 ---
 
-### 4. Run both together
+### Run both together
 
-Open **two terminals**:
+| Terminal 1 — Frontend | Terminal 2 — Backend |
+|---|---|
+| `npm run dev` | `cd backend && uvicorn main:app --reload --port 8000` |
 
-| Terminal 1 — Frontend       | Terminal 2 — Backend                                          |
-|-----------------------------|---------------------------------------------------------------|
-| `npm run dev`               | `cd backend && uvicorn main:app --reload --port 8000`         |
+---
 
-Then open **http://localhost:5173** in your browser.
+## Deployment
+
+### Frontend → Vercel (already deployed)
+
+Your frontend is live on Vercel. To update it after pushing to GitHub, Vercel auto-deploys on every push to `main`.
+
+**Add the backend URL as an environment variable in Vercel:**
+1. Go to your project on [vercel.com](https://vercel.com)
+2. Settings → Environment Variables
+3. Add: `VITE_API_URL` = `https://your-backend.onrender.com`
+4. Redeploy (Deployments → Redeploy)
+
+---
+
+### Backend → Render
+
+Vercel does **not** support Python backends — deploy the backend to **Render** as a Web Service.
+
+**Steps:**
+
+1. Go to [render.com](https://render.com) → sign in with GitHub
+
+2. Click **New +** → **Web Service**
+
+3. Connect `diiyeah/Nimbus`
+
+4. Configure:
+
+| Setting | Value |
+|---|---|
+| **Name** | `nimbusai-backend` |
+| **Root Directory** | `backend` |
+| **Runtime** | `Python 3` |
+| **Build Command** | `pip install -r requirements.txt` |
+| **Start Command** | `uvicorn main:app --host 0.0.0.0 --port 10000` |
+
+5. Add **Environment Variables** in Render dashboard:
+
+| Key | Value |
+|---|---|
+| `GEMINI_API_KEY` | your Gemini API key |
+| `MONGODB_URI` | your MongoDB Atlas connection string |
+| `ALLOWED_ORIGINS` | `https://your-vercel-app.vercel.app` |
+
+6. Click **Create Web Service** — Render builds and deploys in ~3 minutes
+
+7. Copy the Render URL (e.g. `https://nimbusai-backend.onrender.com`)
+
+8. Go back to **Vercel** → Settings → Environment Variables → set `VITE_API_URL` to that URL → Redeploy
 
 ---
 
 ## API Reference
 
-Interactive docs available at **http://localhost:8000/docs** when the backend is running.
-
-| Method   | Endpoint               | Description                                      |
-|----------|------------------------|--------------------------------------------------|
-| `GET`    | `/health`              | Liveness check + MongoDB status                  |
-| `POST`   | `/analyze/upload`      | Upload CSV → Gemini AI → save → return results   |
-| `POST`   | `/analyze/sample`      | Run built-in sample data through Gemini AI       |
-| `GET`    | `/history`             | List all past analyses (newest first)            |
-| `GET`    | `/history/{id}`        | Get single analysis by ID                        |
-| `DELETE` | `/history/{id}`        | Delete a single analysis                         |
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/health` | Liveness check + MongoDB status |
+| `POST` | `/analyze/upload` | Upload CSV → Gemini AI → save → return results |
+| `POST` | `/analyze/sample` | Run built-in sample data through Gemini AI |
+| `GET` | `/history` | List all past analyses (newest first) |
+| `GET` | `/history/{id}` | Get single analysis by ID |
+| `DELETE` | `/history/{id}` | Delete a single analysis |
 
 ---
 
 ## CSV Format
-
-Your CSV must include these columns (case-insensitive):
 
 ```csv
 service,spend,usage
@@ -173,37 +203,16 @@ RDS,3100,28
 S3,1240,71
 ```
 
-- `service` — AWS service name
-- `spend` — monthly cost in USD (can include `$` and `,`)
-- `usage` — utilisation percentage 0–100 (can include `%`)
-
----
-
-## Deployment
-
-### Frontend → Vercel
-
-1. Import `diiyeah/Nimbus` at [vercel.com/new](https://vercel.com/new)
-2. Framework: **Vite** · Build: `npm run build` · Output: `dist`
-3. Add environment variable: `VITE_API_URL=https://your-backend.onrender.com`
-4. Deploy
-
-### Backend → Render
-
-1. New **Web Service** at [render.com](https://render.com)
-2. Connect `diiyeah/Nimbus` · Root directory: `backend`
-3. Build command: `pip install -r requirements.txt`
-4. Start command: `uvicorn main:app --host 0.0.0.0 --port 10000`
-5. Add environment variables: `GEMINI_API_KEY`, `MONGODB_URI`, `ALLOWED_ORIGINS`
+Columns are case-insensitive. `spend` accepts `$` and `,`. `usage` accepts `%`.
 
 ---
 
 ## Features
 
-- **Upload screen** — drag-and-drop CSV with client-side preview and validation
-- **AI analysis** — Gemini 1.5 Flash generates cost-saving recommendations
-- **Dashboard** — spend trend chart, top services bar chart, waste heatmap, service cards
-- **Recommendations** — severity-coded cards with issue, action, and savings estimate
-- **History** — all past analyses as cards, click to reload any dashboard
-- **Responsive** — desktop sidebar, mobile drawer + bottom tab bar
-- **Animations** — Framer Motion throughout: page transitions, count-up stats, skeleton loaders
+- Drag-and-drop CSV upload with client-side preview and validation
+- Gemini AI cost-saving recommendations with severity and category
+- Spend trend chart, top services bar chart, waste heatmap, service cards
+- Analysis history page — click any card to reload that dashboard
+- Responsive layout — desktop sidebar, mobile drawer + bottom tab bar
+- Skeleton loaders, page transitions, count-up animations
+- Fallback mock recommendations when Gemini API is unavailable
